@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YÖKDİL Fen Maratonu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">YÖKDİL<span>Fen</span></div>
+        <div class="progress-info">
+            Tamamlanan: <span id="completed-days-count">0</span>/54 Gün
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="map-view">
+            <h2>Çalışma Haritası</h2>
+            <div class="days-grid" id="days-grid"></div>
+        </section>
+
+        <section id="mission-view" class="hidden">
+            <div class="mission-header">
+                <button class="btn btn-outline" onclick="returnToMap()">← Çık</button>
+                <div class="stage-tracker">
+                    <span id="ind-1" class="active">1. Öğren</span> ➔ 
+                    <span id="ind-2">2. Eş Anlam</span> ➔ 
+                    <span id="ind-3">3. Türkçe</span> ➔ 
+                    <span id="ind-4">4. Test</span>
+                </div>
+            </div>
+
+            <div id="stage-1" class="stage-container">
+                <div class="card">
+                    <div class="word-header">
+                        <h1 id="word-title">WORD</h1>
+                        <button id="speakBtn" class="speak-btn" title="Seslendir">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                                <path d="M14 3.23v17.54l-5-5H3V8.23h6l5-5zM16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM19 12c0 2.86-1.48 5.35-3.77 6.69v-2.1c1.32-1.04 2.17-2.84 2.17-5.09s-.85-4.05-2.17-5.09V4.81C17.52 6.15 19 8.64 19 12z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="type" id="word-type">(type)</span>
+                    <h3 id="word-tr" class="tr-text">Türkçe Anlamı</h3>
+                    <div class="synonyms-box"><strong>Eş Anlamlılar:</strong> <span id="word-synonyms"></span></div>
+                    <div class="example-box">
+                        <p id="word-example" class="eng"></p>
+                        <p id="word-example-tr" class="tr"></p>
+                    </div>
+                </div>
+                <div class="button-container">
+                    <button id="prevBtn" class="secondary-btn">← Önceki Kelime</button>
+                    <button id="nextBtn" class="primary-btn">Anladım, Sonraki Kelime →</button>
+                </div>
+            </div>
+
+            <div id="stage-match" class="stage-container hidden">
+                <h2 id="match-title" class="text-center mb-2">Eşleştirme</h2>
+                <div class="matching-board">
+                    <div class="match-col" id="match-col-left"></div>
+                    <div class="match-col" id="match-col-right"></div>
+                </div>
+            </div>
+
+            <div id="stage-4" class="stage-container hidden">
+                <div class="card quiz-card">
+                    <h3 class="mb-2 text-center text-muted">Aşama 4: Bilgini Sına</h3>
+                    <h2 id="quiz-word" class="text-center" style="font-size: 2rem; margin-bottom: 1.5rem;">WORD</h2>
+                    <div class="options-grid" id="quiz-options"></div>
+                </div>
+            </div>
+            
+            <div id="stage-completed" class="stage-container hidden text-center">
+                <h1 style="color: var(--success); font-size: 3rem; margin-bottom: 1rem;">🎉</h1>
+                <h2>Gün Tamamlandı!</h2>
+                <p class="text-muted mt-2">Bu günün tüm aşamalarını başarıyla geçtin.</p>
+                <button class="btn btn-primary mt-2" onclick="completeDayAndReturn()">Haritaya Dön ve Kaydet</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

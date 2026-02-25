@@ -5,7 +5,7 @@ let state = {
     learnIndex: 0,
     quizIndex: 0,
     matchState: { type: null, chunkIndex: 0, left: null, right: null, matchesLeft: 0 },
-    failedTest: false,
+    failedWords: [], // Hem eşleştirme hem test hatalarını burada topluyoruz
     completedDays: JSON.parse(localStorage.getItem('yokdilCompletedDays')) || []
 };
 
@@ -14,16 +14,23 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStats();
 });
 
+// --- HARİTA VE İSİMLENDİRME ---
 function initMap() {
     const grid = document.getElementById('days-grid');
     grid.innerHTML = '';
     
-    // 54 Günlük sınırlama
-    for(let i = 1; i <= 54; i++) {
+    for(let i = 1; i <= 58; i++) {
         const dayId = `day${i}`;
         const btn = document.createElement('button');
         btn.className = `day-btn ${state.completedDays.includes(dayId) ? 'completed' : ''}`;
-        btn.textContent = `Gün ${i}`;
+        
+        // 55-58 arası özel isimlendirme
+        if (i >= 55) {
+            btn.textContent = `Phrasal Verbs ${i - 54}`;
+            btn.style.fontSize = "0.8rem";
+        } else {
+            btn.textContent = `Gün ${i}`;
+        }
         
         if(courseData && courseData[dayId]) {
             btn.onclick = () => startDay(dayId);
@@ -38,9 +45,24 @@ function updateStats() {
     document.getElementById('completed-days-count').textContent = state.completedDays.length;
 }
 
+// --- MODAL SİSTEMİ (Alert Yerine) ---
+function showModal(title, text, callback) {
+    const modal = document.getElementById('custom-modal');
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-text').textContent = text;
+    modal.classList.remove('hidden');
+    
+    document.getElementById('modal-close').onclick = () => {
+        modal.classList.add('hidden');
+        if(callback) callback();
+    };
+}
+
+// --- AKIŞ KONTROLÜ ---
 function startDay(dayId) {
     state.dayId = dayId;
-    state.words = courseData[dayId];
+    state.words = [...courseData[dayId]]; // Orijinal veriyi bozmamak için kopyalıyoruz
+    state.failedWords = []; // Yeni gün için hataları temizle
     document.getElementById('map-view').classList.add('hidden');
     document.getElementById('mission-view').classList.remove('hidden');
     switchStage(1);
@@ -49,6 +71,7 @@ function startDay(dayId) {
 function switchStage(stageNum) {
     state.currentStage = stageNum;
     
+    // Göstergeleri güncelle
     for(let i=1; i<=4; i++) {
         const ind = document.getElementById(`ind-${i}`);
         if(ind) ind.classList.remove('active');
@@ -58,6 +81,7 @@ function switchStage(stageNum) {
         if(activeInd) activeInd.classList.add('active');
     }
 
+    // Sahneleri gizle
     document.getElementById('stage-1').classList.add('hidden');
     document.getElementById('stage-match').classList.add('hidden');
     document.getElementById('stage-4').classList.add('hidden');
@@ -65,7 +89,6 @@ function switchStage(stageNum) {
 
     if(stageNum === 1) { 
         state.learnIndex = 0; 
-        state.failedTest = false; 
         initLearnMode();
         loadLearnWord(); 
     }
@@ -75,7 +98,7 @@ function switchStage(stageNum) {
     if(stageNum === 5) document.getElementById('stage-completed').classList.remove('hidden');
 }
 
-// --- AŞAMA 1: ÖĞRENME MODU ---
+// --- AŞAMA 1: ÖĞRENME ---
 function initLearnMode() {
     const nextBtn = document.getElementById('nextBtn');
     const prevBtn = document.getElementById('prevBtn');
@@ -97,7 +120,6 @@ function initLearnMode() {
         }
     };
 
-    // Web Speech API Seslendirme
     speakBtn.onclick = () => {
         const text = document.getElementById('word-title').textContent;
         const msg = new SpeechSynthesisUtterance();
@@ -120,12 +142,11 @@ function loadLearnWord() {
     document.getElementById('word-example').textContent = wordObj.example;
     document.getElementById('word-example-tr').textContent = wordObj.exampleTr;
 
-    // Geri butonu kontrolü
     const prevBtn = document.getElementById('prevBtn');
     prevBtn.style.visibility = (state.learnIndex === 0) ? 'hidden' : 'visible';
 }
 
-// --- EŞLEŞTİRME VE TEST ---
+// --- AŞAMA 2 & 3: EŞLEŞTİRME (HATA TAKİPLİ) ---
 function startMatchStage(type) {
     state.matchState.type = type;
     state.matchState.chunkIndex = 0;
@@ -140,7 +161,9 @@ function loadMatchChunk() {
     const currentWords = state.words.slice(startIndex, startIndex + chunkSize);
     
     const currentPart = state.matchState.chunkIndex + 1;
-    document.getElementById('match-title').textContent = (state.matchState.type === 'synonym' ? 'Eş Anlamlıları Eşleştir' : 'Türkçe Karşılıkları Eşleştir') + ` (${currentPart}/${totalChunks})`;
+    document.getElementById('match-title').textContent = 
+        (state.matchState.type === 'synonym' ? 'Eş Anlamlıları Eşleştir' : 'Türkçe Karşılıkları Eşleştir') + 
+        ` (${currentPart}/${totalChunks})`;
     
     const leftCol = document.getElementById('match-col-left');
     const rightCol = document.getElementById('match-col-right');
@@ -202,6 +225,13 @@ function checkMatch() {
         }, 300);
     } else {
         left.classList.add('wrong'); right.classList.add('wrong');
+        
+        // --- EŞLEŞTİRME HATASINI KAYDET ---
+        const failedWord = state.words.find(w => w.word === left.dataset.id);
+        if(!state.failedWords.find(w => w.word === failedWord.word)) {
+            state.failedWords.push(failedWord);
+        }
+
         setTimeout(() => {
             left.classList.remove('wrong', 'selected');
             right.classList.remove('wrong', 'selected');
@@ -210,18 +240,33 @@ function checkMatch() {
     state.matchState.left = null; state.matchState.right = null;
 }
 
+// --- AŞAMA 4: TEST ---
 function loadQuizWord() {
     document.getElementById('stage-4').classList.remove('hidden');
     const wordObj = state.words[state.quizIndex];
     document.getElementById('quiz-word').textContent = wordObj.word;
+    
+    const quizSpeakBtn = document.getElementById('quizSpeakBtn');
+    quizSpeakBtn.onclick = () => {
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = wordObj.word;
+        msg.lang = 'en-US';
+        msg.rate = 0.9;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(msg);
+    };
+
     const optionsContainer = document.getElementById('quiz-options');
     optionsContainer.innerHTML = '';
 
     let options = [wordObj.tr];
+    const allDayWords = courseData[state.dayId]; 
+    
     while(options.length < 3) {
-        let randomWord = state.words[Math.floor(Math.random() * state.words.length)].tr;
+        let randomWord = allDayWords[Math.floor(Math.random() * allDayWords.length)].tr;
         if(!options.includes(randomWord)) options.push(randomWord);
     }
+    
     options.sort(() => Math.random() - 0.5);
 
     options.forEach(opt => {
@@ -234,22 +279,34 @@ function loadQuizWord() {
 }
 
 function handleQuizAnswer(selected, correct, btn) {
+    const wordObj = state.words[state.quizIndex];
     if(selected === correct) {
         btn.classList.add('correct');
         setTimeout(() => checkQuizProgress(), 1000);
     } else {
         btn.classList.add('wrong');
-        state.failedTest = true;
+        // TEST HATASINI KAYDET
+        if(!state.failedWords.find(w => w.word === wordObj.word)) {
+            state.failedWords.push(wordObj);
+        }
         setTimeout(() => checkQuizProgress(), 1500);
     }
 }
 
 function checkQuizProgress() {
     state.quizIndex++;
-    if(state.quizIndex >= state.words.length) {
-        if(state.failedTest) {
-            alert("Bazı hatalar yaptın! Tekrar etmek için öğrenme moduna dönüyorsun.");
-            switchStage(1);
+    if (state.quizIndex >= state.words.length) {
+        if (state.failedWords.length > 0) {
+            // MODERN MODAL ÇAĞRISI
+            showModal(
+                "Tekrar Gerekiyor", 
+                `${state.failedWords.length} kelimede hata yaptın. Şimdi bu kelimeleri tekrar edeceksin.`,
+                () => {
+                    state.words = [...state.failedWords];
+                    state.failedWords = [];
+                    switchStage(1);
+                }
+            );
         } else {
             switchStage(5);
         }
